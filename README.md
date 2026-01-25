@@ -1,421 +1,348 @@
-# PythonAnywhere Auto-Renewal Bot 🤖
+# PythonAnywhere Auto-Renewal Bot
 
-Automatically renew your PythonAnywhere free web app every 15 days using GitHub Actions.  Never let your app expire again! 
+Automatically renew your PythonAnywhere free web app every 15 days using GitHub Actions—never let your app expire again!
 
-![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-blue)
-![Python](https://img.shields.io/badge/Python-3.9+-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-2088FF?logo=github-actions&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Schedule](https://img.shields.io/badge/Runs-1st%20%26%2015th%20Monthly-brightgreen.svg)
 
-## 🚀 Features
+**[Main App Demo](https://tanishqmudaliar.pythonanywhere.com)** | **[Weather Monitoring System](https://github.com/tanishqmudaliar/Weather-Monitoring-System)**
 
-- ✅ **Automated Renewal**:  Runs every 1st and 15th of the month at 04:00 UTC (9: 30 AM IST)
-- ✅ **Smart Logging**: Commits success/failure logs after every run (twice per month)
-- ✅ **Status Tracking**: Clear SUCCESS ✅ or FAILED ❌ indicators in logs
-- ✅ **Complete Audit Trail**: Track every renewal attempt with timestamps
-- ✅ **No False Positives**: Only logs success when renewal actually works
-- ✅ **Secure Credentials**: Uses GitHub Secrets for safe password storage
-- ✅ **Manual Trigger**: Run the workflow anytime from the GitHub Actions tab
-- ✅ **Zero Maintenance**: Set it and forget it! 
+---
 
-## 🔗 Part of the Auto-Deploy Ecosystem
+## Table of Contents
 
-This bot works alongside the **[Weather-Monitoring-System](https://github.com/tanishqmudaliar/Weather-Monitoring-System)** to provide a complete, maintenance-free hosting solution on PythonAnywhere's free tier.
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Quick Setup](#quick-setup)
+  - [Local Testing](#local-testing)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Workflow Logs](#workflow-logs)
+- [Related Repositories](#related-repositories)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-### Complete Architecture
+---
+
+## Overview
+
+PythonAnywhere free tier apps expire after ~~3 months~~ **1 month** of inactivity *(updated Jan 2026)*. This bot automatically renews your web app by logging into PythonAnywhere and clicking the "Extend" button every 15 days via GitHub Actions.
+
+Combined with the [Weather-Monitoring-System](https://github.com/tanishqmudaliar/Weather-Monitoring-System) auto-deployment webhook, this creates a completely hands-off hosting solution that stays alive indefinitely on the free tier.
+
+### The Problem
+
+```
+Day 1:   Deploy app ✅
+Day 30:  App expires ❌
+Day 31:  Users see error page 😢
+Day 32:  Manual renewal... again 😤
+```
+
+### The Solution
+
+```
+Day 1:   Deploy app ✅
+Day 15:  Bot auto-renews ✅
+Day 30:  Bot auto-renews ✅
+...forever! 🎉
+```
+
+---
+
+## Features
+
+### Automation
+- Scheduled renewal on the 1st and 15th of every month (04:00 UTC / 09:30 IST)
+- Manual trigger available from GitHub Actions tab
+- Automatic log commits prevent GitHub from disabling the workflow
+
+### Logging & Monitoring
+- Complete audit trail in `.github/logs/workflow_runs.log`
+- Clear SUCCESS ✅ or FAILED ❌ status indicators
+- Timestamps, run IDs, and trigger source for debugging
+
+### Security
+- Credentials stored as encrypted GitHub Secrets
+- Never exposed in logs or code
+- HTTPS for all PythonAnywhere connections
+
+---
+
+## Tech Stack
+
+| Component | Technologies |
+|-----------|-------------|
+| **Language** | Python 3.9+ |
+| **Libraries** | requests, beautifulsoup4, python-dotenv |
+| **CI/CD** | GitHub Actions |
+| **Target** | PythonAnywhere Free Tier |
+
+---
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     FULLY AUTOMATED PYTHONANYWHERE HOSTING                  │
+│                    FULLY AUTOMATED PYTHONANYWHERE HOSTING                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                                GITHUB                               │    │
-│  │                                                                     │    │
-│  │  ┌─────────────────────────────┐    ┌─────────────────────────────┐ │    │
-│  │  │ Weather-Monitoring-System   │    │ PythonAnywhere-Auto-Renew   │ │    │
-│  │  │                             │    │                             │ │    │
-│  │  │ • Main application code     │    │ • Renewal bot               │ │    │
-│  │  │ • Webhook endpoint          │    │ • Runs every 15 days        │ │    │
-│  │  │ • Auto-deploys on push      │    │ • Keeps app alive forever   │ │    │
-│  │  └──────────────┬──────────────┘    └──────────────┬──────────────┘ │    │
-│  │                 │                                  │                │    │
-│  │                 │ Webhook                          │ GitHub Actions │    │
-│  │                 ▼                                  ▼                │    │
-│  └─────────────────┼──────────────────────────────────┼────────────────┘    │
-│                    │                                  │                     │
-│  ┌─────────────────▼──────────────────────────────────▼────────────────┐    │
-│  │                            PYTHONANYWHERE                           │    │
-│  │                                                                     │    │
-│  │   https://tanishqmudaliar.pythonanywhere.com                        │    │
-│  │                                                                     │    │
-│  │   ┌─────────────────────┐         ┌─────────────────────┐           │    │
-│  │   │ Webhook Receiver    │         │ Auto-Renewal        │           │    │
-│  │   │                     │         │                     │           │    │
-│  │   │ • git pull          │         │ • Extends app       │           │    │
-│  │   │ • pip install       │         │ • Every 15 days     │           │    │
-│  │   │ • Reload webapp     │         │ • Prevents expiry   │           │    │
-│  │   └─────────────────────┘         └─────────────────────┘           │    │
-│  │                                                                     │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                              GITHUB                                  │   │
+│  │                                                                      │   │
+│  │   ┌─────────────────────────────┐  ┌─────────────────────────────┐   │   │
+│  │   │  Weather-Monitoring-System  │  │  PythonAnywhere-Auto-Renew  │   │   │
+│  │   │                             │  │                             │   │   │
+│  │   │  • Main application code    │  │  • Renewal bot (this repo)  │   │   │
+│  │   │  • Deployment endpoint      │  │  • Runs 1st & 15th monthly  │   │   │
+│  │   │  • Auto-deploys on push     │  │  • Keeps app alive forever  │   │   │
+│  │   └──────────────┬──────────────┘  └──────────────┬──────────────┘   │   │
+│  │                  │ POST request                   │ GitHub           │   │
+│  │                  │ (/github-webhook)              │ Actions          │   │
+│  │                  ▼                                ▼                  │   │
+│  └──────────────────┼────────────────────────────────┼──────────────────┘   │
+│                     │                                │                      │
+│  ┌──────────────────▼────────────────────────────────▼──────────────────┐   │
+│  │                            PYTHONANYWHERE                            │   │
+│  │                                                                      │   │
+│  │      ┌─────────────────────────┐    ┌─────────────────────────┐      │   │
+│  │      │   Deployment Endpoint   │    │     Auto-Renewal        │      │   │
+│  │      │  • git pull             │    │  • Extends app expiry   │      │   │
+│  │      │  • pip install          │    │  • Prevents shutdown    │      │   │
+│  │      │  • Reload webapp        │    │  • Zero maintenance     │      │   │
+│  │      └─────────────────────────┘    └─────────────────────────┘      │   │
+│  │                                                                      │   │
+│  │              https://tanishqmudaliar.pythonanywhere.com              │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  RESULT: Push code → Instantly live → Stays alive forever → Zero effort!    │
-│                                                                             │
+│               Push code → Instantly live → Stays alive forever              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Two Repos, One Solution
+### How It Works
 
-| Repository | Purpose | Frequency |
-|------------|---------|-----------|
-| **[Weather-Monitoring-System](https://github.com/tanishqmudaliar/Weather-Monitoring-System)** | Main app + auto-deployment via webhook | On every push |
-| **[PythonAnywhere-Auto-Renew](https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew)** (this repo) | Keeps app alive on free tier | Every 15 days |
+1. GitHub Actions runs the workflow on the 1st and 15th of each month
+2. Python script logs into PythonAnywhere using your credentials
+3. Script navigates to the web apps dashboard
+4. If an "Extend" button is found, it clicks to renew
+5. Result (success/failure) is logged and committed
+6. Regular commits keep the workflow from being auto-disabled
 
-**Together they provide:**
-- ✅ **Instant deployment** - Push to GitHub, live in seconds
-- ✅ **24/7 uptime** - App never expires
-- ✅ **Zero maintenance** - Completely hands-off
-- ✅ **Free hosting** - No paid tier required
+---
 
-## 📋 How It Works
-
-1. **GitHub Actions runs the workflow** twice a month (1st and 15th)
-2. **Script logs into PythonAnywhere** using your credentials
-3. **Clicks the "Extend" button** on your web app dashboard
-4. **Checks renewal status** - did it succeed or fail?
-5. **Logs the result** with timestamp and status to `.github/logs/workflow_runs.log`
-6. **Commits the log file** automatically - creating a permanent record
-7. **Keeps workflow active** - the regular commits prevent GitHub from disabling it
-
-## 🎯 Why You Need This
-
-PythonAnywhere free tier apps expire after **1 month** of inactivity (as of Jan 2026). This bot ensures your app stays alive by renewing it automatically every 15 days.
-
-### The Problem Without This Bot
-
-```
-Day 1:  Deploy app ✅
-Day 30: App expires ❌
-Day 31: Users see error page 😢
-Day 32: You manually renew...  again 😤
-```
-
-### The Solution With This Bot
-
-```
-Day 1:  Deploy app ✅
-Day 15: Bot auto-renews ✅
-Day 30: Bot auto-renews ✅
-Day 45: Bot auto-renews ✅
-... forever!  🎉
-```
-
-## 📦 Setup Instructions
+## Getting Started
 
 ### Prerequisites
 
 - PythonAnywhere free account with a web app
 - GitHub account
-- 5 minutes of your time! 
+- 5 minutes of setup time
 
-### Step 1: Fork/Clone This Repository
+### Quick Setup
+
+#### Step 1: Fork or Clone
 
 ```bash
-git clone https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew
+git clone https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew.git
 cd PythonAnywhere-Auto-Renew
 ```
 
-Or click the **"Use this template"** button on GitHub. 
+Or click **"Use this template"** on GitHub.
 
-### Step 2: Add GitHub Secrets
+#### Step 2: Add GitHub Secrets
 
-1. Go to your repository on GitHub
-2. Click **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Add these two secrets: 
+1. Go to your repository → **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret** and add:
 
-   **Secret 1:**
-   - Name: `PA_USERNAME`
-   - Value: Your PythonAnywhere username
+| Secret Name | Value |
+|-------------|-------|
+| `PA_USERNAME` | Your PythonAnywhere username |
+| `PA_PASSWORD` | Your PythonAnywhere password |
 
-   **Secret 2:**
-   - Name: `PA_PASSWORD`
-   - Value: Your PythonAnywhere password
-
-### Step 3: Enable Workflow Permissions
+#### Step 3: Enable Workflow Permissions
 
 1. Go to **Settings** → **Actions** → **General**
-2. Scroll to **Workflow permissions**
-3. Select **"Read and write permissions"**
-4. Check **"Allow GitHub Actions to create and approve pull requests"**
-5. Click **Save**
+2. Under **Workflow permissions**, select **"Read and write permissions"**
+3. Check **"Allow GitHub Actions to create and approve pull requests"**
+4. Click **Save**
 
-### Step 4: Enable Actions (If Needed)
-
-If your repo is private or has restricted actions: 
-
-1. Go to **Settings** → **Actions** → **General**
-2. Under **Actions permissions**, select: 
-   - **"Allow all actions and reusable workflows"**
-3. Click **Save**
-
-### Step 5: Test the Workflow
+#### Step 4: Test the Workflow
 
 1. Go to the **Actions** tab
-2. Click **Auto-Renew PythonAnywhere** workflow
-3. Click **Run workflow** → Select **main** branch → **Run workflow**
-4. Wait ~30 seconds and check the logs
-5. Verify it says "✅ Login successful". 
-6. Check your repository - a new file `.github/logs/workflow_runs. log` should appear
+2. Click **Auto-Renew PythonAnywhere**
+3. Click **Run workflow** → **Run workflow**
+4. Verify logs show "✅ Login successful"
 
-### Step 6 (Optional): Set Up Auto-Deployment
+### Local Testing
 
-Want instant deployments too? Add the webhook endpoint to your main app: 
+1. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-👉 **[See Weather-Monitoring-System for webhook setup](https://github.com/tanishqmudaliar/Weather-Monitoring-System#-automated-deployment)**
+2. **Create `.env` file**
+   ```env
+   PA_USERNAME=your_username
+   PA_PASSWORD=your_password
+   ```
 
-## 📅 Schedule
+3. **Run the script**
+   ```bash
+   python renew_python_anywhere.py
+   ```
 
-### Workflow Runs & Log Commits
-The workflow runs automatically **twice per month**, and commits a log file after each run: 
+Expected output:
+```
+🔐 Logging in as your_username...
+✅ Login successful
+📊 Checking dashboard...
+ℹ️  No extend button found.
+   This usually means your app doesn't need renewal yet.
+```
 
-| Date | Time (UTC) | Time (IST) | Action |
-|------|-----------|-----------|---------|
-| 1st of every month | 04:00 | 09:30 AM | Renew app + Commit log |
-| 15th of every month | 04:00 | 09:30 AM | Renew app + Commit log |
+---
 
-**Result:** You'll have **~24 commits per year** (2 per month) with complete audit trail.
+## Project Structure
 
-You can also trigger it manually anytime from the Actions tab! 
+```
+PythonAnywhere-Auto-Renew/
+├── .github/
+│   ├── workflows/
+│   │   └── renew.yml              # GitHub Actions workflow
+│   └── logs/
+│       └── workflow_runs.log      # Auto-generated run history
+├── renew_python_anywhere.py       # Main renewal script
+├── requirements.txt               # Python dependencies
+├── .env                           # Local credentials (not in git)
+├── .gitignore                     # Git ignore rules
+├── LICENSE                        # MIT License
+└── README.md                      # Project documentation
+```
 
-## 📊 Workflow Logs
+---
 
-Every run is automatically logged and committed to `.github/logs/workflow_runs.log`:
+## Configuration
 
-### Successful Renewal: 
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `PA_USERNAME` | PythonAnywhere username | Yes |
+| `PA_PASSWORD` | PythonAnywhere password | Yes |
+
+### Schedule Customization
+
+Edit `.github/workflows/renew.yml` to change the cron schedule:
+
+```yaml
+# Current: 1st and 15th at 04:00 UTC
+- cron: '0 4 1,15 * *'
+
+# Alternative: Every Monday at noon UTC
+- cron: '0 12 * * 1'
+
+# Alternative: Every 10 days
+- cron: '0 4 1,11,21 * *'
+```
+
+---
+
+## Workflow Logs
+
+Every run is logged to `.github/logs/workflow_runs.log`:
+
+### Success Entry
 ```
 ========================================
-Workflow Run: 2026-01-01 04:00:00 UTC
+Workflow Run: 2026-01-15 04:00:00 UTC
 Status: SUCCESS ✅
 Trigger: schedule
-Repository: username/repo
+Repository: username/PythonAnywhere-Auto-Renew
 Branch: main
 Run ID: 123456789
-Run Number: 1
+Run Number: 5
 ========================================
 ```
 
-### Failed Renewal: 
+### Failure Entry
 ```
 ========================================
 Workflow Run: 2026-01-15 04:00:00 UTC
 Status: FAILED ❌
-Trigger:  schedule
-Repository: username/repo
-Branch:  main
-Run ID:  123456790
-Run Number: 2
+Trigger: schedule
+Repository: username/PythonAnywhere-Auto-Renew
+Branch: main
+Run ID: 123456790
+Run Number: 6
 Note: Check GitHub Actions logs for error details
 ========================================
 ```
 
-### Log File Features:
-- ✅ Tracks all workflow runs with timestamps
-- ✅ Shows SUCCESS ✅ or FAILED ❌ status for each run
-- ✅ Creates a commit after every run (prevents workflow disable)
-- ✅ Never gets deleted (permanent history)
-- ✅ Helps debug issues and track renewals
-- ✅ Shows ~24 entries per year (2 per month)
-- ✅ No false positives - only logs success when renewal actually works
+---
 
-## 🔒 Security
+## Related Repositories
 
-- 🔐 Credentials stored as encrypted GitHub Secrets
-- 🔐 Never exposed in logs or code
-- 🔐 Script uses HTTPS for all connections
-- 🔐 No third-party access to your data
+| Repository | Purpose |
+|------------|---------|
+| [Weather-Monitoring-System](https://github.com/tanishqmudaliar/Weather-Monitoring-System) | Main weather app with auto-deployment webhook |
+| [PythonAnywhere-Auto-Renew](https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew) | Keeps the app alive on free tier (this repo) |
 
-**Never commit your `.env` file!** It's in `.gitignore` for safety.
+Together, these repositories provide:
+- Instant automated deployment on every push
+- 24/7 uptime without manual intervention
+- Zero-maintenance free-tier hosting
 
-## 🧪 Local Testing
+---
 
-Want to test the script locally before deploying?
+## Troubleshooting
 
-### 1. Install dependencies: 
-```bash
-pip install -r requirements. txt
-```
-
-### 2. Create `.env` file:
-```env
-PA_USERNAME=your_username
-PA_PASSWORD=your_password
-```
-
-### 3. Run the script:
-```bash
-python renew_app.py
-```
-
-You should see: 
-```
-🔐 Logging in as your_username... 
-✅ Login successful
-📊 Checking dashboard... 
-ℹ️ No extend button found. 
-This usually means your app doesn't need renewal yet.
-```
-
-## 🛠️ Project Structure
-
-```
-pythonanywhere-auto-renew/
-├── .github/
-│   ├── workflows/
-│   │   └── renew.yml           # GitHub Actions workflow
-│   └── logs/
-│       └── workflow_runs.log   # Auto-generated run logs
-├── renew_app.py                # Main renewal script
-├── requirements.txt            # Python dependencies
-├── .gitignore                  # Ignored files
-├── .env                        # Local credentials (not in GitHub)
-└── README.md                   # You are here! 
-```
-
-## 🐛 Troubleshooting
-
-### Issue: "Login failed"
-**Solution:** 
+### "Login failed"
 - Verify `PA_USERNAME` and `PA_PASSWORD` secrets are correct
-- Check if PythonAnywhere changed its login page
-- Try logging in manually first to ensure credentials work
-- Look for "FAILED ❌" status in `.github/logs/workflow_runs.log`
+- Try logging in manually to confirm credentials work
+- Check if PythonAnywhere changed their login page
 
-### Issue: "No extend button found"
-**Solution:** 
-- This is normal! Your app doesn't need renewal yet
-- The button only appears when renewal is needed
-- Script will try again on next scheduled run
-- This is logged as SUCCESS ✅ (not an error)
+### "No extend button found"
+- This is normal, your app doesn't need renewal yet
+- The button only appears when renewal is due
+- Logged as SUCCESS ✅ (not an error)
 
-### Issue: "Workflow disabled"
-**Solution:**
-- Make sure you enabled "Read and write permissions"
-- The automatic logging system prevents this by committing every 15 days
-- Check `.github/logs/workflow_runs.log` for recent commits
+### "Workflow disabled"
+- GitHub disables inactive workflows after 60 days
+- This bot commits logs every 15 days to prevent this
+- Re-enable manually if needed, then run the workflow
 
-### Issue: "Repository access blocked"
-**Solution:**
-- Enable Actions in Settings → Actions → General
-- Select "Allow all actions and reusable workflows"
-- Make sure repo is public OR actions are enabled for private repos
-
-### Issue: Log shows "FAILED ❌" status
-**Solution:**
-- Go to GitHub Actions tab and check the detailed workflow logs
-- Look for error messages from the renewal script
+### Log shows "FAILED ❌"
+- Check the GitHub Actions workflow run for detailed error logs
 - Common causes: wrong credentials, PythonAnywhere site changes
-- The workflow will retry on the next scheduled run
-
-## 🔄 Why Commits Every Run? 
-
-**Problem:** GitHub disables scheduled workflows after 60 days of no repository activity.
-
-**Solution:** By committing the log file after every workflow run: 
-1. ✅ Creates activity every 15 days (well under the 60-day limit)
-2. ✅ Provides complete audit trail of all renewals
-3. ✅ Shows exactly when your app was renewed
-4. ✅ Tracks success/failure status for debugging
-5. ✅ Makes debugging easy if something goes wrong
-6. ✅ Keeps workflow active forever automatically
-
-**Is this safe?** YES! ✅
-- Used by thousands of automation repositories
-- Creates 2 commits per month (24 per year) - minimal
-- Well within GitHub's terms of service
-- Creates meaningful commits with actual log data (not spam)
-- Industry standard practice for scheduled workflows
-
-**No manual intervention needed! ** The workflow stays active forever because it commits every 15 days.
-
-## ⚙️ Customization
-
-### Change Schedule Time
-
-Edit `.github/workflows/renew.yml`:
-
-```yaml
-# Run at different times
-- cron: '30 18 1,15 * *'  # 6:30 PM UTC (midnight IST)
-- cron: '0 12 1,15 * *'   # Noon UTC (5:30 PM IST)
-```
-
-### Change Frequency
-
-```yaml
-# Run weekly on Mondays
-- cron: '0 4 * * 1'
-
-# Run every 10 days (more frequent)
-- cron: '0 4 1,11,21 * *'
-
-# Run monthly only
-- cron:  '0 4 1 * *'
-```
-
-**Note:** Commits happen on every run, so adjust frequency based on how often you want log commits.
-
-### Change Python Script Name
-
-If your script is named differently, update line 28 in the workflow:
-
-```yaml
-run: python3 your_script_name.py
-```
-
-## 📝 License
-
-MIT License - feel free to use, modify, and distribute! 
-
-## 🤝 Contributing
-
-Issues and pull requests are welcome! 
-
-Found a bug? [Open an issue](https://github.com/tanishqmudaliar/PythonAnywhere-Auto-Renew/issues)
-
-Have an improvement?  Submit a PR!
-
-## ⭐ Show Your Support
-
-If this helped you, give it a ⭐ on GitHub!
-
-## 📧 Contact
-
-Questions? Open an issue or reach out! 
+- Workflow retries automatically on the next scheduled run
 
 ---
 
-## 🎉 Success Stories
+## Contributing
 
-> "Set it up once in 2025, still running perfectly in 2026!" - Happy User
+Contributions are welcome! Please feel free to submit pull requests or open issues.
 
-> "My app hasn't gone down once since using this bot!" - Another Happy User
-
-> "The success/failure logging helped me catch a credential issue immediately!" - Grateful User
-
-> "Combined with the webhook auto-deploy, I never touch PythonAnywhere anymore!" - Power User
-
----
-
-## 🔗 Related Projects
-
-| Repository | Description |
-|------------|-------------|
-| **[Weather-Monitoring-System](https://github.com/tanishqmudaliar/Weather-Monitoring-System)** | Real-time weather app with auto-deployment webhook |
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/improvement`)
+3. Commit your changes (`git commit -m 'Add improvement'`)
+4. Push to the branch (`git push origin feature/improvement`)
+5. Open a Pull Request
 
 ---
 
-**Made with ❤️ for PythonAnywhere users**
+## License
 
-**Stop manually clicking that extend button.  Automate it! 🚀**
+This project is open source and available under the [MIT License](LICENSE).
 
-**🌐 [See it in action](https://tanishqmudaliar.pythonanywhere.com) | 📦 [Main App Repo](https://github.com/tanishqmudaliar/Weather-Monitoring-System)**
+---
+
+Made with ❤️ for PythonAnywhere users
+
+**Stop manually clicking that extend button. Automate it! 🚀**
