@@ -5,28 +5,45 @@ from bs4 import BeautifulSoup
 import time
 from dotenv import load_dotenv
 
-# Load environment variables from .env file (for local testing)
 load_dotenv()
 
-USERNAME = os.environ.get('PA_USERNAME')
-PASSWORD = os.environ.get('PA_PASSWORD')
 
-if not USERNAME or not PASSWORD:
-    print("❌ Error: PA_USERNAME and PA_PASSWORD must be set")
-    sys.exit(1)
+ACCOUNTS = [
+    {
+        "name": "Slaiz",
+        "username": os.environ.get('PA_USERNAME'),
+        "password": os.environ.get('PA_PASSWORD'),
+        "dashboard_url": "https://www.pythonanywhere.com/user/Slaiz/webapps/"
+    },
+    {
+        "name": "Anker",
+        "username": os.environ.get('ANKER_USERNAME'),
+        "password": os.environ.get('ANKER_PASSWORD'),
+        "dashboard_url": "https://www.pythonanywhere.com/user/ankermax/webapps/"
+    },
+    {
+        "name": "Akel",
+        "username": os.environ.get('PA_AKEL_USERNAME'),
+        "password": os.environ.get('PA_AKEL_PASSWORD'),
+        "dashboard_url": "https://www.pythonanywhere.com/user/akel/webapps/"
+    }
+]
+
+for acc in ACCOUNTS:
+    if not acc["username"] or not acc["password"]:
+        print(f"❌ Error: Credentials for {acc['name']} must be set in .env")
+        sys.exit(1)
 
 LOGIN_URL = "https://www.pythonanywhere.com/login/"
-DASHBOARD_URL = f"https://www.pythonanywhere.com/user/Slaiz/webapps/"
 
-def renew():
+def renew(username, password, dashboard_url, account_name):
     session = requests.Session()
     session.headers.update({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     })
     
     try:
-        # 1. Get login page
-        print(f"🔐 Logging in as {USERNAME}...")
+        print(f"🔐 Logging in as {username} ({account_name})...")
         login_page = session.get(LOGIN_URL, timeout=10)
         login_page.raise_for_status()
         
@@ -34,16 +51,15 @@ def renew():
         csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'})
         
         if not csrf_token:
-            print("❌ Could not find CSRF token on login page")
+            print(f"❌ [{account_name}] Could not find CSRF token on login page")
             return False
         
         csrf_token = csrf_token['value']
         
-        # 2. Submit login
         payload = {
             'csrfmiddlewaretoken': csrf_token,
-            'auth-username': USERNAME,
-            'auth-password': PASSWORD,
+            'auth-username': username,
+            'auth-password': password,
             'login_view-current_step': 'auth'
         }
         
@@ -56,27 +72,23 @@ def renew():
         )
         response.raise_for_status()
         
-        # Check multiple indicators of successful login
         if "Log out" not in response.text and "logout" not in response.text.lower():
-            print("❌ Login failed - 'Log out' not found in response")
-            print(f"Response URL: {response.url}")
+            print(f"❌ [{account_name}] Login failed - 'Log out' not found in response")
             return False
             
         if "login" in response.url.lower():
-            print("❌ Login failed - still on login page")
+            print(f"❌ [{account_name}] Login failed - still on login page")
             return False
         
-        print("✅ Login successful")
+        print(f"✅ [{account_name}] Login successful")
         
-        # 3. Access dashboard
-        print("📊 Checking dashboard...")
-        time.sleep(1)  # Be polite to the server
+        print(f"📊 [{account_name}] Checking dashboard...")
+        time.sleep(1) 
         
-        dashboard = session.get(DASHBOARD_URL, timeout=10)
+        dashboard = session.get(dashboard_url, timeout=10)
         dashboard.raise_for_status()
         soup = BeautifulSoup(dashboard.content, 'html.parser')
         
-        # 4. Find extend button/form
         forms = soup.find_all('form', action=True)
         extend_action = None
         
@@ -84,55 +96,66 @@ def renew():
             action = form.get('action', '')
             if "/extend" in action.lower():
                 extend_action = action
-                print(f"🔍 Found extend action: {action}")
+                print(f"🔍 [{account_name}] Found extend action: {action}")
                 break
         
         if not extend_action:
-            print("ℹ️  No extend button found.")
-            print("   This usually means your app doesn't need renewal yet.")
-            return True  # Not an error - just nothing to extend
+            print(f"ℹ️  [{account_name}] No extend button found. App doesn't need renewal yet.")
+            return True
         
-        # 5. Get CSRF token from dashboard
         dashboard_csrf = soup.find('input', {'name': 'csrfmiddlewaretoken'})
         if not dashboard_csrf:
-            print("❌ Could not find CSRF token on dashboard")
+            print(f"❌ [{account_name}] Could not find CSRF token on dashboard")
             return False
         
-        # 6. Submit extend request
         extend_url = f"https://www.pythonanywhere.com{extend_action}"
-        print(f"⏰ Extending web app at {extend_url}...")
+        print(f"⏰ [{account_name}] Extending web app at {extend_url}...")
         
         result = session.post(
             extend_url,
             data={'csrfmiddlewaretoken': dashboard_csrf['value']},
-            headers={'Referer': DASHBOARD_URL},
+            headers={'Referer': dashboard_url},
             timeout=10
         )
         result.raise_for_status()
         
-        # Verify extension was successful
         if result.status_code == 200:
-            # Check if we're back on the dashboard
             if "webapps" in result.url.lower():
-                print("✅ Web app extended successfully!")
+                print(f"✅ [{account_name}] Web app extended successfully!")
                 return True
             else:
-                print(f"⚠️  Unexpected redirect to: {result.url}")
+                print(f"⚠️ [{account_name}] Unexpected redirect to: {result.url}")
                 return False
         else:
-            print(f"❌ Extension failed with status: {result.status_code}")
+            print(f"❌ [{account_name}] Extension failed with status: {result.status_code}")
             return False
-            
+
     except requests.Timeout:
-        print("❌ Request timed out")
+        print(f"❌ [{account_name}] Request timed out")
         return False
     except requests.RequestException as e:
-        print(f"❌ Network error: {e}")
+        print(f"❌ [{account_name}] Network error: {e}")
         return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ [{account_name}] Unexpected error: {e}")
         return False
 
 if __name__ == "__main__":
-    success = renew()
-    sys.exit(0 if success else 1)
+    all_success = True
+    
+    for account in ACCOUNTS:
+        print(f"\n{'='*40}\n▶️ Processing account: {account['name']}\n{'='*40}")
+        
+        success = renew(
+            username=account['username'], 
+            password=account['password'], 
+            dashboard_url=account['dashboard_url'],
+            account_name=account['name']
+        )
+        
+        if not success:
+            all_success = False
+            
+        time.sleep(2)
+        
+    sys.exit(0 if all_success else 1)
